@@ -1,0 +1,5 @@
+# Force LF on files that run on the Linux server, so editing on Windows can't
+# introduce CRLF (which breaks shell shebangs and systemd unit parsing).
+*.sh            text eol=lf
+deploy/*.conf   text eol=lf
+deploy/*.service text eol=lf
