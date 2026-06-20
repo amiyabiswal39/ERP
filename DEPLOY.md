@@ -167,18 +167,35 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## 10. Updating after a `git push`
 
+A helper script does the whole redeploy (pull → install → build shared/api/web →
+`prisma db push` → restart API → reload nginx → health check):
+
+```bash
+cd /opt/erp/ERP
+./deploy/update.sh            # full redeploy
+./deploy/update.sh --no-db    # skip schema sync when nothing changed in schema.prisma
+```
+
+The script needs sudo for the `systemctl`/`nginx` steps, so run it as your
+sudo-capable user (it will prompt). If the file isn't executable after a fresh
+clone: `chmod +x deploy/update.sh` (or run `bash deploy/update.sh`).
+
+<details><summary>Equivalent manual steps</summary>
+
 ```bash
 cd /opt/erp/ERP
 git pull
 npm install
 npm run build -w @erp/shared
 npx prisma generate --schema apps/api/prisma/schema.prisma
+set -a; . apps/api/.env; set +a
 npx prisma db push --schema apps/api/prisma/schema.prisma   # if schema changed
 npm run build -w @erp/api
 npm run build -w @erp/web
 sudo systemctl restart erp-api
 sudo systemctl reload nginx
 ```
+</details>
 
 ---
 
