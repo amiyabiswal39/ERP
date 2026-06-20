@@ -124,12 +124,46 @@ Open **`http://YOUR_EC2_PUBLIC_DNS`** in a browser → log in with `admin@erp.te
 
 ## 9. (Recommended) Add HTTPS with a domain
 
-Point an A record at the EC2 IP, then:
+You need a **domain** (TLS certs aren't issued for raw EC2 IPs). Point an **A record**
+at the instance's public IP and make sure the Security Group allows port **443**.
+
+You have two options — both end with HTTPS + auto-renew.
+
+### Option A — let certbot do everything (quickest)
+Works on the plain HTTP config from step 8. Certbot obtains the cert, rewrites the
+server block to add the 443 listener, and sets up the HTTP→HTTPS redirect:
 ```bash
 sudo apt install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d erp.yourdomain.com
 ```
-Certbot edits the nginx config and auto-renews. Update `CORS_ORIGIN` in `apps/api/.env` to `https://erp.yourdomain.com` and `sudo systemctl restart erp-api`.
+
+### Option B — use the hardened config in this repo (`deploy/nginx-erp-ssl.conf`)
+Gives you explicit control: HTTP→HTTPS redirect, TLS 1.2/1.3 only, HSTS, and
+security headers.
+```bash
+sudo apt install -y certbot python3-certbot-nginx
+sudo mkdir -p /var/www/certbot
+
+# 1. Issue the cert first (validates against the running HTTP site, no rewrite):
+sudo certbot certonly --nginx -d erp.yourdomain.com
+
+# 2. Swap in the HTTPS config (edit the domain in all 3 places first):
+sudo sed -i 's/erp\.example\.com/erp.yourdomain.com/g' deploy/nginx-erp-ssl.conf
+sudo cp deploy/nginx-erp-ssl.conf /etc/nginx/sites-available/erp
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+### After either option
+- Update `CORS_ORIGIN` in `apps/api/.env` to `https://erp.yourdomain.com`, then
+  `sudo systemctl restart erp-api`.
+- **Auto-renewal** is handled by the `certbot.timer` systemd unit (`systemctl list-timers | grep certbot`).
+  Make nginx pick up renewed certs automatically with a deploy hook:
+  ```bash
+  echo -e '#!/bin/sh\nsystemctl reload nginx' | sudo tee /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh
+  sudo chmod +x /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh
+  sudo certbot renew --dry-run        # verify renewal works
+  ```
+- Test your TLS setup at https://www.ssllabs.com/ssltest/ (expect an A).
 
 ## 10. Updating after a `git push`
 
