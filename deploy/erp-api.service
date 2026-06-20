@@ -1,0 +1,22 @@
+# ERP API — systemd unit. Keeps the Node/Express API running and restarts on crash/reboot.
+# Install to: /etc/systemd/system/erp-api.service
+# Reads environment from apps/api/.env (loaded by dotenv at startup).
+
+[Unit]
+Description=ERP API (Node/Express)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/erp/ERP/apps/api
+ExecStart=/usr/bin/node dist/server.js
+Restart=on-failure
+RestartSec=5
+# Logs go to the journal: `journalctl -u erp-api -f`
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
