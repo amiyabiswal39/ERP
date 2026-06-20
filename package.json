@@ -1,0 +1,21 @@
+{
+  "name": "erp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Modular ERP for SMBs — Sales/CRM, HR/Payroll, Assets, Finance, Analytics",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev -w @erp/api\" \"npm run dev -w @erp/web\"",
+    "build": "npm run build -w @erp/shared && npm run build -w @erp/api && npm run build -w @erp/web",
+    "db:migrate": "npm run db:migrate -w @erp/api",
+    "db:seed": "npm run db:seed -w @erp/api",
+    "db:reset": "npm run db:reset -w @erp/api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "typescript": "^5.6.3"
+  }
+}
